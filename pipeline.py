@@ -23,5 +23,5 @@ def basic_pipeline(a: str='stres', b: str='sed'):
 
 if __name__ == '__main__':
     compiler.Compiler().compile(
-        pipeline_func=basic_pipeline, package_path="basic_pipeline.json"
+        pipeline_func=basic_pipeline, package_path="test_pipeline.json"
     )
