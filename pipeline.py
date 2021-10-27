@@ -16,6 +16,7 @@ def reverse(a: str)->NamedTuple("outputs", [("before", str), ("after", str)]):
 
 @pipeline(name="test-pipeline",
 description="CICD test", 
+pipeline_root='gs://pawan-vertex-demo/test_pipeine'
              )
 def basic_pipeline(a: str='stres', b: str='sed'):
     concat_task = concat(a, b)
