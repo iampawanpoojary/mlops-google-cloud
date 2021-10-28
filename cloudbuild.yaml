@@ -9,7 +9,7 @@ steps:
     id: 'compile'
 
   - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'test_pipeline.json', 'gs://pawan-vertex-demo']
+    args: ['cp', 'image_classification_pipeline.json', 'gs://pawan-vertex-demo']
     id:  'upload'
     waitFor: ['compile']
 
