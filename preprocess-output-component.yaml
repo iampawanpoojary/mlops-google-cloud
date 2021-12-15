@@ -1,0 +1,114 @@
+name: Import feature values
+inputs:
+- {name: project, type: String}
+- {name: featurestore_id, type: String}
+- {name: entity_type_id, type: String}
+- {name: bigquery_uri, type: String}
+- {name: entity_id_field, type: String}
+- {name: bigquery_table_id, type: String}
+- {name: worker_count, type: Integer, default: '1', optional: true}
+- {name: location, type: String, default: europe-west3, optional: true}
+- {name: api_endpoint, type: String, default: europe-west3-aiplatform.googleapis.com,
+  optional: true}
+- {name: timeout, type: Integer, default: '500', optional: true}
+outputs:
+- {name: featurestore_id, type: String}
+implementation:
+  container:
+    image: python:3.7
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'google-cloud-aiplatform' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+      install --quiet --no-warn-script-location 'google-cloud-aiplatform' --user)
+      && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def import_feature_values(\n    project,\n    featurestore_id,\n    entity_type_id,\n\
+      \    bigquery_uri,\n    entity_id_field,\n    bigquery_table_id,\n    worker_count\
+      \ = 1,\n    location = \"europe-west3\",\n    api_endpoint = \"europe-west3-aiplatform.googleapis.com\"\
+      ,\n    timeout = 500): \n    import collections\n    import datetime\n    from\
+      \ google.cloud import aiplatform\n    from google.protobuf.timestamp_pb2 import\
+      \ Timestamp\n    time_now = datetime.datetime.now().timestamp()\n    seconds\
+      \ = int(time_now)\n    proto_timestamp = Timestamp(seconds=seconds)\n    client_options\
+      \ = {\"api_endpoint\": api_endpoint}\n\n    client = aiplatform.gapic.FeaturestoreServiceClient(client_options=client_options)\n\
+      \    entity_type = f\"projects/{project}/locations/{location}/featurestores/{featurestore_id}/entityTypes/{entity_type_id}\"\
+      \n    entity_id_field=\"user_id\"\n\n    bigquery_source = aiplatform.gapic.BigQuerySource(input_uri=bigquery_uri)\n\
+      \n    feature_specs = [\n        aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id=\"\
+      user_id\"),\n        aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id=\"\
+      item_id\"),\n        aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id=\"\
+      rating\"),\n        aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id=\"\
+      timestamp\"),\n    ]\n    import_feature_values_request = aiplatform.gapic.ImportFeatureValuesRequest(\n\
+      \        entity_type=entity_type,\n        bigquery_source=bigquery_source,\n\
+      \        feature_specs=feature_specs,\n        entity_id_field=entity_id_field,\n\
+      \        feature_time=proto_timestamp,\n        worker_count=worker_count,\n\
+      \        disable_online_serving=True\n    )\n    lro_response = client.import_feature_values(request=import_feature_values_request)\n\
+      \    print(\"Long running operation:\", lro_response.operation.name)\n    import_feature_values_response\
+      \ = lro_response.result(timeout=timeout)\n    print(\"import_feature_values_response:\"\
+      , import_feature_values_response)\n\n    outputs = collections.namedtuple(\n\
+      \      \"Outputs\",\n      [\"featurestore_id\"])\n\n    return outputs(featurestore_id)\n\
+      \ndef _serialize_str(str_value: str) -> str:\n    if not isinstance(str_value,\
+      \ str):\n        raise TypeError('Value \"{}\" has type \"{}\" instead of str.'.format(\n\
+      \            str(str_value), str(type(str_value))))\n    return str_value\n\n\
+      import argparse\n_parser = argparse.ArgumentParser(prog='Import feature values',\
+      \ description='')\n_parser.add_argument(\"--project\", dest=\"project\", type=str,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--featurestore-id\"\
+      , dest=\"featurestore_id\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--entity-type-id\", dest=\"entity_type_id\", type=str,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--bigquery-uri\"\
+      , dest=\"bigquery_uri\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--entity-id-field\", dest=\"entity_id_field\", type=str,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--bigquery-table-id\"\
+      , dest=\"bigquery_table_id\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--worker-count\", dest=\"worker_count\", type=int, required=False,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--location\", dest=\"location\"\
+      , type=str, required=False, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --api-endpoint\", dest=\"api_endpoint\", type=str, required=False, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--timeout\", dest=\"timeout\", type=int, required=False,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\", dest=\"\
+      _output_paths\", type=str, nargs=1)\n_parsed_args = vars(_parser.parse_args())\n\
+      _output_files = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = import_feature_values(**_parsed_args)\n\
+      \n_output_serializers = [\n    _serialize_str,\n\n]\n\nimport os\nfor idx, output_file\
+      \ in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n\
+      \    except OSError:\n        pass\n    with open(output_file, 'w') as f:\n\
+      \        f.write(_output_serializers[idx](_outputs[idx]))\n"
+    args:
+    - --project
+    - {inputValue: project}
+    - --featurestore-id
+    - {inputValue: featurestore_id}
+    - --entity-type-id
+    - {inputValue: entity_type_id}
+    - --bigquery-uri
+    - {inputValue: bigquery_uri}
+    - --entity-id-field
+    - {inputValue: entity_id_field}
+    - --bigquery-table-id
+    - {inputValue: bigquery_table_id}
+    - if:
+        cond: {isPresent: worker_count}
+        then:
+        - --worker-count
+        - {inputValue: worker_count}
+    - if:
+        cond: {isPresent: location}
+        then:
+        - --location
+        - {inputValue: location}
+    - if:
+        cond: {isPresent: api_endpoint}
+        then:
+        - --api-endpoint
+        - {inputValue: api_endpoint}
+    - if:
+        cond: {isPresent: timeout}
+        then:
+        - --timeout
+        - {inputValue: timeout}
+    - '----output-paths'
+    - {outputPath: featurestore_id}

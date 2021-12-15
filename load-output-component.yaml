@@ -1,0 +1,79 @@
+name: Load raw data to bigquery
+inputs:
+- {name: project_id, type: String}
+- {name: raw_data_path, type: String}
+- {name: bigquery_dataset_id, type: String}
+- {name: bigquery_location, type: String}
+- {name: bigquery_table_id, type: String}
+outputs:
+- {name: bigquery_table_id, type: String}
+implementation:
+  container:
+    image: python:3.7
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'google-cloud-bigquery==2.20.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+      pip install --quiet --no-warn-script-location 'google-cloud-bigquery==2.20.0'
+      --user) && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def load_raw_data_to_bigquery(\n    project_id,\n    raw_data_path,\n    bigquery_dataset_id,\n\
+      \    bigquery_location,\n    bigquery_table_id,\n):\n\n  import collections\n\
+      \  from google.cloud import bigquery\n  import logging\n\n  def load_raw_dataset(\n\
+      \      project_id,\n      bigquery_dataset_id,\n      bigquery_location,\n \
+      \     raw_data_path,\n      bigquery_table_id):\n\n        client = bigquery.Client(project=project_id)\n\
+      \        dataset = bigquery.Dataset(bigquery_dataset_id)\n        dataset.location\
+      \ = bigquery_location\n        dataset = client.create_dataset(dataset, exists_ok=True,\
+      \ timeout=30)\n\n        bigquery_table_id = bigquery_table_id\n        job_config\
+      \ = bigquery.LoadJobConfig(\n            schema=[\n                bigquery.SchemaField(\"\
+      item_id\", \"STRING\"),\n                bigquery.SchemaField(\"user_id\", \"\
+      STRING\"),\n                bigquery.SchemaField(\"rating\", \"STRING\"),\n\
+      \                bigquery.SchemaField(\"timestamp\", \"STRING\"),\n        \
+      \    ],\n            source_format=bigquery.SourceFormat.CSV,\n            create_disposition=bigquery.CreateDisposition.CREATE_IF_NEEDED,\n\
+      \            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,\n \
+      \           field_delimiter=\"\\t\",\n        )\n        uri = raw_data_path\n\
+      \n        load_job = client.load_table_from_uri(\n            uri, bigquery_table_id,\
+      \ job_config=job_config\n        )  \n        res = load_job.result()  \n  \
+      \      logging.info(res)\n        destination_table = client.get_table(bigquery_table_id)\
+      \ \n        logging.info(\"Loaded {} rows.\".format(destination_table.num_rows))\n\
+      \n  load_raw_dataset(project_id,bigquery_dataset_id, bigquery_location, raw_data_path,\
+      \ bigquery_table_id)\n\n  outputs = collections.namedtuple(\n      \"Outputs\"\
+      ,\n      [\"bigquery_table_id\"])\n\n  return outputs(bigquery_table_id)\n\n\
+      def _serialize_str(str_value: str) -> str:\n    if not isinstance(str_value,\
+      \ str):\n        raise TypeError('Value \"{}\" has type \"{}\" instead of str.'.format(\n\
+      \            str(str_value), str(type(str_value))))\n    return str_value\n\n\
+      import argparse\n_parser = argparse.ArgumentParser(prog='Load raw data to bigquery',\
+      \ description='')\n_parser.add_argument(\"--project-id\", dest=\"project_id\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --raw-data-path\", dest=\"raw_data_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--bigquery-dataset-id\", dest=\"bigquery_dataset_id\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --bigquery-location\", dest=\"bigquery_location\", type=str, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--bigquery-table-id\",\
+      \ dest=\"bigquery_table_id\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"----output-paths\", dest=\"_output_paths\", type=str,\
+      \ nargs=1)\n_parsed_args = vars(_parser.parse_args())\n_output_files = _parsed_args.pop(\"\
+      _output_paths\", [])\n\n_outputs = load_raw_data_to_bigquery(**_parsed_args)\n\
+      \n_output_serializers = [\n    _serialize_str,\n\n]\n\nimport os\nfor idx, output_file\
+      \ in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n\
+      \    except OSError:\n        pass\n    with open(output_file, 'w') as f:\n\
+      \        f.write(_output_serializers[idx](_outputs[idx]))\n"
+    args:
+    - --project-id
+    - {inputValue: project_id}
+    - --raw-data-path
+    - {inputValue: raw_data_path}
+    - --bigquery-dataset-id
+    - {inputValue: bigquery_dataset_id}
+    - --bigquery-location
+    - {inputValue: bigquery_location}
+    - --bigquery-table-id
+    - {inputValue: bigquery_table_id}
+    - '----output-paths'
+    - {outputPath: bigquery_table_id}

@@ -1,0 +1,5 @@
+google-cloud-bigquery==2.20.0
+tensorflow==2.5.2
+tf-agents==0.8.0
+pyparsing==2.4.2
+Image

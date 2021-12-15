@@ -1,52 +1,31 @@
 name: Generate movielens dataset for bigquery
-description: Generates BigQuery training data using a MovieLens simulation environment.
 inputs:
-- name: project_id
-  type: String
-  description: |-
-    GCP project ID. This is required because otherwise the BigQuery
-    client will use the ID of the tenant GCP project created as a result of
-    KFP, which doesn't have proper access to BigQuery.
-- {name: raw_data_path, type: String, description: Path to MovieLens 100K's "u.data"
-    file.}
-- {name: batch_size, type: Integer, description: Batch size of environment generated
-    quantities eg. rewards.}
-- name: rank_k
-  type: Integer
-  description: |-
-    Rank for matrix factorization in the MovieLens environment; also
-    the observation dimension.
-- {name: num_actions, type: Integer, description: Number of actions (movie items)
-    to choose from.}
-- {name: driver_steps, type: Integer, description: Number of steps to run per batch.}
-- {name: bigquery_tmp_file, type: String, description: Path to a JSON file containing
-    the training dataset.}
-- name: bigquery_dataset_id
-  type: String
-  description: |-
-    A string of the BigQuery dataset ID in the format of
-    "project.dataset".
-- {name: bigquery_location, type: String, description: A string of the BigQuery dataset
-    location.}
-- name: bigquery_table_id
-  type: String
-  description: |-
-    A string of the BigQuery table ID in the format of
-    "project.dataset.table".
+- {name: project_id, type: String}
+- {name: raw_data_path, type: String}
+- {name: batch_size, type: Integer}
+- {name: rank_k, type: Integer}
+- {name: num_actions, type: Integer}
+- {name: driver_steps, type: Integer}
+- {name: bigquery_tmp_file, type: String}
+- {name: bigquery_dataset_id, type: String}
+- {name: bigquery_location, type: String}
+- {name: bigquery_table_id, type: String}
+- {name: feature_id, type: String}
 outputs:
 - {name: bigquery_dataset_id, type: String}
 - {name: bigquery_location, type: String}
 - {name: bigquery_table_id, type: String}
 implementation:
   container:
-    image: tensorflow/tensorflow:2.7.0
+    image: tensorflow/tensorflow:2.5.0
     command:
     - sh
     - -c
     - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
-      'google-cloud-bigquery==2.20.0' 'Pillow' 'tensorflow==2.7.0' 'tf-agents==0.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1
-      python3 -m pip install --quiet --no-warn-script-location 'google-cloud-bigquery==2.20.0'
-      'tensorflow==2.7.0' 'tf-agents==0.8.0' --user) && "$0" "$@"
+      'google-cloud-bigquery==2.20.0' 'tensorflow==2.5.0' 'Image' 'tf-agents==0.8.0'
+      || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'google-cloud-bigquery==2.20.0' 'tensorflow==2.5.0' 'Image' 'tf-agents==0.8.0'
+      --user) && "$0" "$@"
     - sh
     - -ec
     - |
@@ -64,41 +43,10 @@ implementation:
           bigquery_tmp_file,
           bigquery_dataset_id,
           bigquery_location,
-          bigquery_table_id
+          bigquery_table_id,
+          feature_id
       ):
-        """Generates BigQuery training data using a MovieLens simulation environment.
 
-        Serves as the Generator pipeline component:
-        1. Generates `trajectories.Trajectory` data by applying a random policy on
-          MovieLens simulation environment.
-        2. Converts `trajectories.Trajectory` data to JSON format.
-        3. Loads JSON-formatted data into BigQuery.
-
-        This function is to be built into a Kubeflow Pipelines (KFP) component. As a
-        result, this function must be entirely self-contained. This means that the
-        import statements and helper functions must reside within itself.
-
-        Args:
-          project_id: GCP project ID. This is required because otherwise the BigQuery
-            client will use the ID of the tenant GCP project created as a result of
-            KFP, which doesn't have proper access to BigQuery.
-          raw_data_path: Path to MovieLens 100K's "u.data" file.
-          batch_size: Batch size of environment generated quantities eg. rewards.
-          rank_k: Rank for matrix factorization in the MovieLens environment; also
-            the observation dimension.
-          num_actions: Number of actions (movie items) to choose from.
-          driver_steps: Number of steps to run per batch.
-          bigquery_tmp_file: Path to a JSON file containing the training dataset.
-          bigquery_dataset_id: A string of the BigQuery dataset ID in the format of
-            "project.dataset".
-          bigquery_location: A string of the BigQuery dataset location.
-          bigquery_table_id: A string of the BigQuery table ID in the format of
-            "project.dataset.table".
-
-        Returns:
-          A NamedTuple of (`bigquery_dataset_id`, `bigquery_location`,
-          `bigquery_table_id`).
-        """
         # pylint: disable=g-import-not-at-top
         import collections
         import json
@@ -120,23 +68,8 @@ implementation:
             rank_k,
             num_actions,
             driver_steps):
-          """Generates `trajectories.Trajectory` data from the simulation environment.
 
-          Constructs a MovieLens simulation environment, and generates a set of
-          `trajectories.Trajectory` data using a random policy.
-
-          Args:
-            raw_data_path: Path to MovieLens 100K's "u.data" file.
-            batch_size: Batch size of environment generated quantities eg. rewards.
-            rank_k: Rank for matrix factorization in the MovieLens environment; also
-              the observation dimension.
-            num_actions: Number of actions (movie items) to choose from.
-            driver_steps: Number of steps to run per batch.
-
-          Returns:
-            A replay buffer holding randomly generated`trajectories.Trajectory` data.
-          """
-          # Create MovieLens simulation environment.
+          # Create movielens simulation environment.
           env = movielens_py_environment.MovieLensPyEnvironment(
               raw_data_path,
               rank_k,
@@ -168,14 +101,7 @@ implementation:
 
         def build_dict_from_trajectory(
             trajectory):
-          """Builds a dict from `trajectory` data.
 
-          Args:
-            trajectory: A `trajectories.Trajectory` object.
-
-          Returns:
-            A dict holding the same data as `trajectory`.
-          """
           trajectory_dict = {
               "step_type": trajectory.step_type.numpy().tolist(),
               "observation": [{
@@ -193,18 +119,7 @@ implementation:
             replay_buffer,
             batch_size,
             dataset_file):
-          """Writes replay buffer data to a file, each JSON in one line.
 
-          Each `trajectories.Trajectory` object in `replay_buffer` will be written as
-          one line to the `dataset_file` in JSON format. I.e., the `dataset_file`
-          would be a newline-delimited JSON file.
-
-          Args:
-            replay_buffer: A `replay_buffers.TFUniformReplayBuffer` holding
-              `trajectories.Trajectory` objects.
-            batch_size: Batch size of environment generated quantities eg. rewards.
-            dataset_file: File path. Will be overwritten if already exists.
-          """
           dataset = replay_buffer.as_dataset(sample_batch_size=batch_size)
           dataset_size = replay_buffer.num_frames().numpy()
 
@@ -219,22 +134,7 @@ implementation:
             bigquery_dataset_id,
             bigquery_location,
             bigquery_table_id):
-          """Loads training dataset into BigQuery table.
 
-          Loads training dataset of `trajectories.Trajectory` in newline delimited
-          JSON into a BigQuery dataset and table, using a BigQuery client.
-
-          Args:
-            project_id: GCP project ID. This is required because otherwise the
-              BigQuery client will use the ID of the tenant GCP project created as a
-              result of KFP, which doesn't have proper access to BigQuery.
-            dataset_file: Path to a JSON file containing the training dataset.
-            bigquery_dataset_id: A string of the BigQuery dataset ID in the format of
-              "project.dataset".
-            bigquery_location: A string of the BigQuery dataset location.
-            bigquery_table_id: A string of the BigQuery table ID in the format of
-              "project.dataset.table".
-          """
           # Construct a BigQuery client object.
           client = bigquery.Client(project=project_id)
 
@@ -296,11 +196,12 @@ implementation:
 
       def _serialize_str(str_value: str) -> str:
           if not isinstance(str_value, str):
-              raise TypeError('Value "{}" has type "{}" instead of str.'.format(str(str_value), str(type(str_value))))
+              raise TypeError('Value "{}" has type "{}" instead of str.'.format(
+                  str(str_value), str(type(str_value))))
           return str_value
 
       import argparse
-      _parser = argparse.ArgumentParser(prog='Generate movielens dataset for bigquery', description='Generates BigQuery training data using a MovieLens simulation environment.')
+      _parser = argparse.ArgumentParser(prog='Generate movielens dataset for bigquery', description='')
       _parser.add_argument("--project-id", dest="project_id", type=str, required=True, default=argparse.SUPPRESS)
       _parser.add_argument("--raw-data-path", dest="raw_data_path", type=str, required=True, default=argparse.SUPPRESS)
       _parser.add_argument("--batch-size", dest="batch_size", type=int, required=True, default=argparse.SUPPRESS)
@@ -311,6 +212,7 @@ implementation:
       _parser.add_argument("--bigquery-dataset-id", dest="bigquery_dataset_id", type=str, required=True, default=argparse.SUPPRESS)
       _parser.add_argument("--bigquery-location", dest="bigquery_location", type=str, required=True, default=argparse.SUPPRESS)
       _parser.add_argument("--bigquery-table-id", dest="bigquery_table_id", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--feature-id", dest="feature_id", type=str, required=True, default=argparse.SUPPRESS)
       _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=3)
       _parsed_args = vars(_parser.parse_args())
       _output_files = _parsed_args.pop("_output_paths", [])
@@ -353,6 +255,8 @@ implementation:
     - {inputValue: bigquery_location}
     - --bigquery-table-id
     - {inputValue: bigquery_table_id}
+    - --feature-id
+    - {inputValue: feature_id}
     - '----output-paths'
     - {outputPath: bigquery_dataset_id}
     - {outputPath: bigquery_location}
