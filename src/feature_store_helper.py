@@ -30,9 +30,9 @@ def cleanup_featurestore(
 def create_featurestore(
     project: str,
     featurestore_id: str,
-    fixed_node_count: int = 1,
     location: str,
     api_endpoint: str,
+    fixed_node_count: int = 1,
     timeout: int = 500,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -84,9 +84,9 @@ def create_entity_type(
     project: str,
     featurestore_id: str,
     entity_type_id: str,
-    description: str = "entity",
     location: str,
     api_endpoint: str,
+    description: str = "entity",
     timeout: int = 300,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -112,10 +112,10 @@ def create_feature(
     entity_type_id: str,
     feature_id: str,
     value_type: aiplatform.gapic.Feature.ValueType,
-    description: str = "feature",
     location: str,
     api_endpoint: str,
     timeout: int = 300,
+    description: str = "feature",
 ):
     # The AI Platform services require regional API endpoints, which need to be
     # in the same region or multi-region overlap with the Feature Store location.
@@ -145,9 +145,9 @@ def import_feature_values(
     entity_type_id: str,
     bigquery_uri: str,
     entity_id_field: str,
-    worker_count: int = 1,
     location: str,
     api_endpoint: str,
+    worker_count: int = 1,
     timeout: int = 500,
 ):
     
@@ -169,9 +169,10 @@ def import_feature_values(
         aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id="rating"),
         aiplatform.gapic.ImportFeatureValuesRequest.FeatureSpec(id="timestamp"),
     ]
+    bigquery_src = aiplatform.gapic.BigQuerySource("bq://mlops-insights-data-sweden.movielens_dataset.training_dataset")
     import_feature_values_request = aiplatform.gapic.ImportFeatureValuesRequest(
         entity_type=entity_type,
-        bigquery_source=bigquery_uri,
+        bigquery_source=bigquery_src,
         feature_specs=feature_specs,
         entity_id_field=entity_id_field,
         feature_time=proto_timestamp,

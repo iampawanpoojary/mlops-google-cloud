@@ -11,8 +11,7 @@ def generate_movielens_dataset_for_bigquery(
     bigquery_tmp_file: str,
     bigquery_dataset_id: str,
     bigquery_location: str,
-    bigquery_table_id: str,
-    feature_id: str
+    bigquery_table_id: str
 ) -> NamedTuple("Outputs", [
     ("bigquery_dataset_id", str),
     ("bigquery_location", str),
@@ -137,6 +136,8 @@ def generate_movielens_dataset_for_bigquery(
             bigquery.SchemaField("discount", "FLOAT64", mode="REPEATED"),
         ],
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        create_disposition=bigquery.CreateDisposition.CREATE_IF_NEEDED,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
     )
 
     with open(dataset_file, "rb") as source_file:
