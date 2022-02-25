@@ -31,8 +31,8 @@ def create_featurestore(
     project: str,
     featurestore_id: str,
     fixed_node_count: int = 1,
-    location: str = "europe-west3",
-    api_endpoint: str = "europe-west3-aiplatform.googleapis.com",
+    location: str,
+    api_endpoint: str,
     timeout: int = 500,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -60,8 +60,8 @@ def create_featurestore(
     
 def list_featurestore(
     project: str,
-    location: str = "europe-west3",
-    api_endpoint: str = "europe-west3-aiplatform.googleapis.com",
+    location: str,
+    api_endpoint: str,
     timeout: int = 500,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -85,8 +85,8 @@ def create_entity_type(
     featurestore_id: str,
     entity_type_id: str,
     description: str = "entity",
-    location: str = "europe-west3",
-    api_endpoint: str = "europe-west3-aiplatform.googleapis.com",
+    location: str,
+    api_endpoint: str,
     timeout: int = 300,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -113,8 +113,8 @@ def create_feature(
     feature_id: str,
     value_type: aiplatform.gapic.Feature.ValueType,
     description: str = "feature",
-    location: str = "europe-west3",
-    api_endpoint: str = "europe-west3-aiplatform.googleapis.com",
+    location: str,
+    api_endpoint: str,
     timeout: int = 300,
 ):
     # The AI Platform services require regional API endpoints, which need to be
@@ -146,8 +146,8 @@ def import_feature_values(
     bigquery_uri: str,
     entity_id_field: str,
     worker_count: int = 1,
-    location: str = "europe-west3",
-    api_endpoint: str = "europe-west3-aiplatform.googleapis.com",
+    location: str,
+    api_endpoint: str,
     timeout: int = 500,
 ):
     
