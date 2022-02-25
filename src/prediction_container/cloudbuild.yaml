@@ -1,11 +1,10 @@
 steps:
-- name: gcr.io/cloud-builders/docker
-  args: ['build', '-t', 'gcr.io/mlop-cg-data-and-insights/prediction-container:latest', '.']
-  env: ["AIP_STORAGE_URI=gs://mlops-vertex-capgemini/artifacts",
-        "PROJECT_ID=mlop-cg-data-and-insights",
+- name: "gcr.io/kaniko-project/executor:latest"
+  args: ["--destination=gcr.io/mlops-insights-data-sweden/prediction-container:latest",
+         "--cache=false",
+         "--cache-ttl=99h"]
+  env: ["AIP_STORAGE_URI=gs://mlops-insights-data-swedenmovielens/artifacts",
+        "PROJECT_ID=mlops-insights-data-sweden",
         "LOGGER_PUBSUB_TOPIC=logger-pubsub-topic"]
-images:
-- 'gcr.io/mlop-cg-data-and-insights/prediction-container:latest'
-
 options:
   machineType: "E2_HIGHCPU_8"
